@@ -12,8 +12,10 @@ class FileStorageTestCase(unittest.TestCase):
 
     def setUp(self):
         self.storage = FileStorage()
+        self.storage._FileStorage__objects = {}
 
     def tearDown(self):
+        self.storage._FileStorage__objects = {}
         if os.path.exists("file.json"):
             os.remove("file.json")
 
@@ -58,9 +60,15 @@ class FileStorageTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists("file.json"))
 
     def test_reload_with_nonexistent_class(self):
-        obj_dict = {"NonexistentClass.id": {"__class__": "NonexistentClass"}}
+        obj_dict = {
+            "NonexistentClass.123": {
+                "__class__": "NonexistentClass",
+                "id": "123"
+            }
+        }
         with open("file.json", 'w') as file:
             json.dump(obj_dict, file)
+
         with self.assertRaises(KeyError):
             self.storage.reload()
 
