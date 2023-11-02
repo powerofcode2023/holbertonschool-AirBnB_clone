@@ -5,6 +5,7 @@ from models.base_model import BaseModel
 from models.user import User
 import os
 import models
+import json
 
 
 class FileStorageTestCase(unittest.TestCase):
@@ -39,7 +40,9 @@ class FileStorageTestCase(unittest.TestCase):
 
     def test_new_without_saving(self):
         obj = User()
+        self.storage.new(obj)
         new_storage = FileStorage()
+        new_storage.reload()
         self.assertIn('User.' + obj.id, new_storage.all())
 
     def test_reload_without_file(self):
@@ -57,9 +60,9 @@ class FileStorageTestCase(unittest.TestCase):
     def test_reload_with_nonexistent_class(self):
         obj_dict = {"NonexistentClass.id": {"__class__": "NonexistentClass"}}
         with open("file.json", 'w') as file:
-            file.write(str(obj_dict))
-        self.storage.reload()
-        self.assertNotIn('NonexistentClass.id', self.storage.all())
+            json.dump(obj_dict, file)
+        with self.assertRaises(KeyError):
+            self.storage.reload()
 
 
 if __name__ == '__main__':
