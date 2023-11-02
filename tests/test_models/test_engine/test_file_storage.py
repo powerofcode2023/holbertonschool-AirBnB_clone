@@ -51,7 +51,7 @@ class FileStorageTestCase(unittest.TestCase):
         obj = User()
         self.storage.new(obj)
         self.storage.save()
-        self.storage.save() # Save again
+        self.storage.save()
         self.assertTrue(os.path.exists("file.json"))
 
     def test_reload_with_nonexistent_class(self):
@@ -59,7 +59,8 @@ class FileStorageTestCase(unittest.TestCase):
         with open("file.json", 'w') as file:
             file.write(str(obj_dict))
         self.storage.reload()
-        self.assertNotIn('NonexistentClass.id', self.storage.all()) # Check for absence of specific key
+        self.assertNotIn('NonexistentClass.id', self.storage.all())
+
 
 if __name__ == '__main__':
     unittest.main()
