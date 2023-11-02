@@ -1,77 +1,93 @@
 #!/usr/bin/python3
+""" Contains unittests for FileStorage class """
 import unittest
-from models.engine.file_storage import FileStorage
-from models.base_model import BaseModel
-from models.user import User
 import os
-import models
-import json
+from models import storage
+from models.base_model import BaseModel
 
 
-class FileStorageTestCase(unittest.TestCase):
+class TestFileStorageClass(unittest.TestCase):
+    """ Tests FileStorage class """
 
-    def setUp(self):
-        self.storage = FileStorage()
-        self.storage._FileStorage__objects = {}
+    def test_all(self):
+        """ Tests all method """
+        # create storage instance and instance of BaseModel
 
-    def tearDown(self):
-        self.storage._FileStorage__objects = {}
+        obj = BaseModel()
+        __objects = storage.all()
+        # test that storage.all() returns dictionary
+        self.assertIsInstance(__objects, dict)
+        # test that BaseModel instance in dictionary of objects
+        key = "{}.{}".format(type(obj).__name__, obj.id)
+        self.assertIn(key, __objects)
+        # test that the value in dictionary is of same type and equal to obj
+        self.assertEqual(obj, __objects[key])
+        self.assertIsInstance(__objects[key], BaseModel)
+
+    def test_new(self):
+        """ Tests new method """
+        # create storage instance and instance of BaseModel
+        obj = BaseModel()
+        # create dictionary to set obj values to with **kwargs
+        new_dict = {}
+        new_dict["id"] = "012345"
+        new_dict["created_at"] = "1995-2-2T10:23:35.123450"
+        new_dict["updated_at"] = "1999-1-4T7:15:05.543210"
+        # create instance with **kwargs and test that object is not in __objects
+        obj2 = BaseModel(**new_dict)
+        key = "{}.{}".format(type(obj2).__name__, obj2.id)
+        self.assertNotIn(key, storage.all())
+        # obj2 is reset to new instance of BaseModel and
+        # should be added to dictionary with new
+        obj2 = BaseModel()
+        key = "{}.{}".format(type(obj2).__name__, obj2.id)
+        __objects = storage.all()
+        self.assertIn(key, __objects)
+        self.assertEqual(obj2, __objects[key])
+
+    def test_save(self):
+        """ Tests save method """
+        # storage = FileStorage()
+        file = "file.json"
+        # Remove file if it exists
+        if os.path.exists(file):
+            os.remove(file)
+        # Test if save creates the file
+        storage.save()
+        self.assertTrue(os.path.exists(file))
+        # Overwrite created file
+        with open(file, 'w') as f:
+            f.write("Placeholder")
+        # Check if save overwrites existing files
+        with open(file, 'r') as f:
+            content = f.read()
+            storage.save()
+            new_content = f.read()
+        self.assertNotEqual(content, new_content)
+
+    def test_reload(self):
+        """ Tests reload method """
+
+        from json import dumps
+
+        # Check if reloading without doing anything reloads the same thing
+        old_dict = storage.all()
+        storage.reload()
+        new_dict = storage.all()
+        self.assertEqual(old_dict.keys(), new_dict.keys())
+
+        # Make new object and a dictionary for that object
+        obj = BaseModel()
+        obj.id = 1
+        dict_dict = {"BaseModel.1": obj.to_dict()}
+        obje_dict = {"BaseModel.1": obj}
+
+        # Overwrite file.json so that it includes just this dictionary
         if os.path.exists("file.json"):
             os.remove("file.json")
+        with open("file.json", 'w') as f:
+            f.write(dumps(dict_dict))
 
-    def test_empty_all(self):
-        all_objects = self.storage.all()
-        self.assertEqual(all_objects, {})
-
-    def test_new_with_base_model(self):
-        obj = BaseModel()
-        self.storage.new(obj)
-        self.assertIn('BaseModel.' + obj.id, self.storage.all())
-
-    def test_save_and_reload_with_multiple_objects(self):
-        obj1 = User()
-        obj2 = BaseModel()
-        self.storage.new(obj1)
-        self.storage.new(obj2)
-        self.storage.save()
-        new_storage = FileStorage()
-        new_storage.reload()
-        all_objects = new_storage.all()
-        self.assertIn('User.' + obj1.id, all_objects)
-        self.assertIn('BaseModel.' + obj2.id, all_objects)
-
-    def test_new_without_saving(self):
-        obj = User()
-        self.storage.new(obj)
-        new_storage = FileStorage()
-        new_storage.reload()
-        self.assertIn('User.' + obj.id, new_storage.all())
-
-    def test_reload_without_file(self):
-        new_storage = FileStorage()
-        new_storage.reload()
-        self.assertIsInstance(new_storage.all(), dict)
-
-    def test_save_with_existing_file(self):
-        obj = User()
-        self.storage.new(obj)
-        self.storage.save()
-        self.storage.save()
-        self.assertTrue(os.path.exists("file.json"))
-
-    def test_reload_with_nonexistent_class(self):
-        obj_dict = {
-            "NonexistentClass.123": {
-                "__class__": "NonexistentClass",
-                "id": "123"
-            }
-        }
-        with open("file.json", 'w') as file:
-            json.dump(obj_dict, file)
-
-        with self.assertRaises(KeyError):
-            self.storage.reload()
-
-
-if __name__ == '__main__':
-    unittest.main()
+        # Reload
+        storage.reload()
+        self.assertEqual(storage.all().keys(), obje_dict.keys())
